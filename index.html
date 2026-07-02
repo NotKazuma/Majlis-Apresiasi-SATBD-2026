@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Paparan Slaid Apresiasi 2025</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Montserrat:wght@500;700&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        /* CSS RESET & VARIABLES */
+        :root {
+            --royal-blue: #0046ad;
+            --dark-blue: #002b6b;
+            --gold: #f3ca65;
+            --gold-gradient: linear-gradient(135deg, #BF953F 0%, #FCF6BA 25%, #B38728 50%, #FBF5B7 75%, #AA771C 100%);
+            --white: #ffffff;
+            --slide-width: 1920px;
+            --slide-height: 1080px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #050a18; color: var(--white); font-family: 'Montserrat', sans-serif; overflow: hidden; }
+
+        /* VIEWPORT WRAPPER FOR PERFECT ASPECT RATIO */
+        #viewport {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* HARD LOCKED SLIDE CANVAS */
+        .slide-canvas {
+            width: var(--slide-width);
+            height: var(--slide-height);
+            background: radial-gradient(circle at 50% 50%, var(--royal-blue) 0%, var(--dark-blue) 100%);
+            border: 12px solid var(--gold);
+            position: relative;
+            display: none; /* Controlled by JS */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8);
+        }
+
+        .slide-canvas.active { display: flex; }
+
+        /* DECORATIVE ENGINE */
+        .slide-canvas::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(rgba(243, 202, 101, 0.12) 1.5px, transparent 1.5px);
+            background-size: 40px 40px; opacity: 0.3; pointer-events: none;
+        }
+
+        .decor-ring {
+            position: absolute; width: 1400px; height: 1400px;
+            border: 2px solid rgba(243, 202, 101, 0.15); border-radius: 50%;
+            top: -700px; right: -500px; pointer-events: none;
+        }
+
+        /* ENGINE REUSABLE CLASS COMPONENT */
+        .gold-text {
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+        }
+
+        .category { font-family: 'Cinzel', serif; font-size: 36px; letter-spacing: 12px; text-transform: uppercase; margin-bottom: 30px; color: rgba(255,255,255,0.85); text-align: center; z-index: 5; }
+        .title { font-family: 'Cinzel', serif; font-size: 85px; font-weight: 700; text-transform: uppercase; text-align: center; line-height: 1.2; z-index: 5; }
+        .sub-label { font-family: 'Playfair Display', serif; font-style: italic; font-size: 46px; color: var(--gold); margin: 30px 0; text-align: center; z-index: 5; }
+        .name { font-size: 68px; font-weight: 700; text-align: center; text-transform: uppercase; max-width: 85%; line-height: 1.3; z-index: 5; text-shadow: 0 12px 24px rgba(0,0,0,0.6); }
+        
+        .divider-box { border: 6px solid var(--gold); padding: 70px 120px; background: rgba(0,0,0,0.3); box-shadow: 0 30px 60px rgba(0,0,0,0.6); text-align: center; z-index: 5; }
+        
+        .group-box { border: 4px solid var(--gold); background: rgba(0, 43, 107, 0.9); padding: 40px 70px; border-radius: 12px; width: 80%; max-width: 1300px; box-shadow: 0 25px 50px rgba(0,0,0,0.6); z-index: 5; }
+        .group-list { list-style: none; display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .group-list li { font-size: 32px; font-weight: 700; text-transform: uppercase; text-align: left; border-bottom: 1px solid rgba(243, 202, 101, 0.2); padding-bottom: 10px; }
+        .group-list li::before { content: "🏆  "; color: var(--gold); }
+
+        .tentatif-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; width: 85%; z-index: 5; margin-top: 20px; }
+        .tentatif-item { background: rgba(0,0,0,0.35); border-top: 6px solid var(--gold); padding: 40px; text-align: center; border-radius: 4px; }
+        .tentatif-item h3 { font-family: 'Cinzel', serif; font-size: 36px; margin-bottom: 15px; }
+        .tentatif-item p { font-size: 24px; font-weight: 500; }
+
+        .badge-icon { font-size: 110px; color: var(--gold); margin-bottom: 30px; filter: drop-shadow(0 0 20px rgba(243, 202, 101, 0.6)); z-index: 5; }
+
+        /* UI PERSISTENT NAVIGATION OVERLAY */
+        .nav-controls { position: fixed; bottom: 30px; right: 30px; display: flex; gap: 20px; z-index: 1000; opacity: 0.2; transition: opacity 0.3s; }
+        .nav-controls:hover { opacity: 1; }
+        .nav-btn { background: rgba(0,0,0,0.6); border: 2px solid var(--gold); color: var(--gold); width: 60px; height: 60px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 24px; transition: 0.2s; }
+        .nav-btn:hover { background: var(--gold); color: var(--dark-blue); }
+    </style>
+</head>
+<body>
+
+<div id="viewport">
+    <div id="deck-root"></div>
+</div>
+
+<div class="nav-controls">
+    <button class="nav-btn" onclick="deckEngine.prev()"><i class="fa-solid fa-chevron-left"></i></button>
+    <button class="nav-btn" onclick="deckEngine.next()"><i class="fa-solid fa-chevron-right"></i></button>
+</div>
+
+<script>
+    /**
+     * MASTER DATA MATRIX - 100% PARSED FROM OFFICIAL DOCUMENTS
+     * ORDER COMPLIED EXACTLY WITH THE RUNNING TIMELINE:
+     * Aluan -> Tahap 1 -> Lucky Draw 1 -> Tahap 2 -> Exam Open -> Tokoh Grand -> Lucky Draw 2 -> KOKU LAST -> Dismiss
+     */
+    const PresentationData = [
+        /* --- SLOT 1: PROTOKOL & ALUAN --- */
+        { type: 'cover', category: 'Majlis Apresiasi', title: 'Anugerah Kecemerlangan', subLabel: 'Pelajar Tahun 2025', meta: 'Sekolah Agama Taman Bayu Damai' },
+        { type: 'tentatif' },
+        { type: 'profile', category: 'Atur Cara Majlis', title: 'Bacaan Doa', subLabel: 'Dipimpin Oleh:', name: 'Ustaz Radin Muhammad Amin Luthfi bin Radin Abd Kadir' },
+        { type: 'profile', category: 'Atur Cara Majlis', title: 'Bacaan Al-Quran', subLabel: 'Oleh Adik:', name: 'Muhammad Nuruddin bin Mohd Anuar Fikri' },
+        { type: 'profile', category: 'Atur Cara Majlis', title: 'Ucapan Puan Guru Besar', subLabel: 'Oleh Yang Berusaha:', name: 'Ustazah Zarina Binti Hasbollah', meta: 'Guru Besar SA Taman Bayu Damai' },
+        { type: 'profile', category: 'Atur Cara Majlis', title: 'Ucapan Mantan Pengerusi BKS', subLabel: 'Oleh Yang Dihormati:', name: 'Puan Siti Sarah Binti Mohamed Ali', meta: 'Mantan Pengerusi BKS Sesi 2024-2026' },
+        { type: 'profile', category: 'Atur Cara Majlis', title: 'Ucapan Perasmian', subLabel: 'Oleh Yang Berbahagia:', name: 'Encik Suhaimi Bin Sujak', meta: 'Ketua Kampung Taman Bayu Damai' },
+
+        /* --- SLOT 2: HADIAH TAHAP 1 --- */
+        { type: 'section', category: 'Majlis Penyampaian Anugerah', title: 'Anugerah Akademik Tahap 1', subLabel: 'Tadika Agama Johor, Darjah 1, 2 & 3' },
+        { type: 'section', category: 'Anugerah Akademik', title: 'Tadika Agama Johor', subLabel: '(TAJ)' },
+        { type: 'individual', category: 'Tadika Agama Johor (TAJ)', title: 'Tempat Pertama', name: 'Muhammad Uwais Bin Mohd Fadzli' },
+        { type: 'individual', category: 'Tadika Agama Johor (TAJ)', title: 'Tempat Kedua', name: 'Muhamad Umar Rizqi Bin Muhamad Faiz' },
+        { type: 'individual', category: 'Tadika Agama Johor (TAJ)', title: 'Tempat Ketiga', name: 'Nur Qhaira Imani Binti Mahadir' },
+
+        { type: 'section', category: 'Anugerah Akademik', title: 'Darjah 1', subLabel: 'Kelas Ibnu Majah / Sina / Umar / Abbas / Rushd' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Majah', title: 'Tempat Pertama', name: 'Haifa Binti Muhammad Haikal' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Majah', title: 'Tempat Kedua', name: 'Muhammad Khalish Anaqi Bin Khairil Anwar' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Majah', title: 'Tempat Ketiga', name: 'Nur Zatil Zahidah Binti Dean' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Sina', title: 'Tempat Pertama', name: 'Mohammad Firhan Affan Bin Mohammad Ajmal' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Sina', title: 'Tempat Kedua', name: 'Ayra Helena Binti Mohammad Allif Iskandeer' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Sina', title: 'Tempat Ketiga', name: 'Nurul Raihan Binti Mohamad Radhi' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Umar', title: 'Tempat Pertama', name: 'Nur Raisha Mikayla Binti Ridzuan' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Umar', title: 'Tempat Kedua', name: 'Ahmad Farhan Bin Fabil' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Umar', title: 'Tempat Ketiga', name: 'Muhammad Aidan Bin Muhammad Afifi' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Abbas', title: 'Tempat Pertama', name: 'Nur Hasya Humaira Binti Muhamad Hafiz' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Abbas', title: 'Tempat Kedua', name: 'Nur Zulaisha Auliya Binti Mohammad Zulkri' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Abbas', title: 'Tempat Ketiga', name: 'Naurah Binti Ahmad Ismat Sabri' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Rushd', title: 'Tempat Pertama', name: 'Nur Adelia Khayra Binti Suhaidi' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Rushd', title: 'Tempat Kedua', name: 'Hawwari Zabir Bin Mohd Hanif' },
+        { type: 'individual', category: 'Darjah 1 Ibnu Rushd', title: 'Tempat Ketiga', name: 'Husna Sofia Binti Rusdi' },
+
+        { type: 'section', category: 'Anugerah Akademik', title: 'Darjah 2', subLabel: 'Kelas Ibnu Majah / Abbas / Umar / Rushd / Sina' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Majah', title: 'Tempat Pertama', name: 'Muhammad Irfan Bin Muhammad Zaki' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Majah', title: 'Tempat Kedua', name: 'Muhammad Al Hariz Bin Muamar Zulkifli' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Majah', title: 'Tempat Ketiga', name: 'Salahuddin Al Ayyubi Bin Lukman Hakim' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Abbas', title: 'Tempat Pertama', name: 'Syadiq Mah Bin Shahidin Mah' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Abbas', title: 'Tempat Kedua', name: 'Muhammad Syaddad Azad Bin Sabturani' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Abbas', title: 'Tempat Ketiga', name: 'Arifah Hana Binti Mohd Azmi' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Umar', title: 'Tempat Pertama', name: 'Melor Binti Ahmad Badrol Hakim' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Umar', title: 'Tempat Kedua', name: 'Husnatul Annisa Binti Mohd Azrul' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Umar', title: 'Tempat Ketiga', name: 'Farhah Hannani Binti Muhammad Fadhullah' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Rushd', title: 'Tempat Pertama', name: 'Sareemah Naemah Binti Amir Badri' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Rushd', title: 'Tempat Kedua', name: 'Muhammad Yusof Zakwan Bin Muhammad Abdul Alif' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Rushd', title: 'Tempat Ketiga', name: 'Muhammad Farith Thaqif Bin Mohd Raffi' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Sina', title: 'Tempat Pertama', name: 'Muhammad Hamizan Hakim Putra Bin Zainal Abidin' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Sina', title: 'Tempat Kedua', name: 'Raja Mikayla Rose Binti Raja Muhamad Shafiq' },
+        { type: 'individual', category: 'Darjah 2 Ibnu Sina', title: 'Tempat Ketiga', name: 'Muhammad Aqeel Syamil Bin Mohd Sarimi' },
+
+        { type: 'section', category: 'Anugerah Akademik', title: 'Darjah 3', subLabel: 'Kelas Ibnu Umar / Majah / Sina / Abbas' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Umar', title: 'Tempat Pertama', name: 'Raja Muhammad Mikhail Ziyad Bin Raja Muhamad Syafiq' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Umar', title: 'Tempat Kedua', name: 'Siti Nur Umairah Batrisyia Binti Abdur Rahman' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Umar', title: 'Tempat Ketiga', name: 'Syasya Humaira Binti Fakhrul Syirazi Shah' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Majah', title: 'Tempat Pertama', name: 'Muhammad Azri Faiz Bin Salleh Hudin' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Majah', title: 'Tempat Kedua', name: 'Muhammad Fatih Bin Muhammad Faiz' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Majah', title: 'Tempat Ketiga', name: 'Muhammad Hafidh Ziqri Bin Mohd Zawadi' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Sina', title: 'Tempat Pertama', name: 'Muhammad Amsyar Rizqie Bin Mohd Khairi' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Sina', title: 'Tempat Kedua', name: 'Hauratul Maqsurah Binti Mohd Luqmannulhakim' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Sina', title: 'Tempat Ketiga', name: 'Muhammad Zarif Zahran Bin Sharizan' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Abbas', title: 'Tempat Pertama', name: 'Nur Aneesa Binti Jofry' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Abbas', title: 'Tempat Kedua', name: 'Muhammad Aariz Fahim Binti Mohd Fitri' },
+        { type: 'individual', category: 'Darjah 3 Ibnu Abbas', title: 'Tempat Ketiga', name: 'Ahmad Faiq Bin Fabil' },
+
+        /* --- INTERMISSION: LUCKY DRAW 1 --- */
+        { type: 'section', category: 'Acara Sampingan', title: 'Cabutan Bertuah', subLabel: 'Sesi 1' },
+
+        /* --- SLOT 3: HADIAH TAHAP 2 --- */
+        { type: 'section', category: 'Majlis Penyampaian Anugerah', title: 'Anugerah Akademik Tahap 2', subLabel: 'Darjah 4 & Darjah 5' },
+        { type: 'section', category: 'Anugerah Akademik', title: 'Darjah 4', subLabel: 'Kelas Ibnu Khaldun / Malik / Qayyum' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Khaldun', title: 'Tempat Pertama', name: 'Wan Nur Ayra Hanania Binti Wan Nur Farhan' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Khaldun', title: 'Tempat Kedua', name: 'Nur Irdina Insyirah Binti Mohd Hazli' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Khaldun', title: 'Tempat Ketiga', name: 'Muhammad Naufal Firaas Bin Mohd Nawizam' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Malik', title: 'Tempat Pertama', name: 'Nur Faiqah Hanisah Binti Mohd Faizal' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Malik', title: 'Tempat Kedua', name: 'Muhammad Amin Khalish Bin Mohd Kamaruzuan' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Malik', title: 'Tempat Ketiga', name: 'Zahratun Basyerah Binti Rais' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Qayyum', title: 'Tempat Pertama', name: 'Hannani Zahiah Binti Mohd Hanif' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Qayyum', title: 'Tempat Kedua', name: 'Nur Syifa Iman Binti Mohd Khairul Azli' },
+        { type: 'individual', category: 'Darjah 4 Ibnu Qayyum', title: 'Tempat Ketiga', name: 'Muhammad Zulwafiq Amsyar Bin Mohammad Zulkri' },
+
+        { type: 'section', category: 'Anugerah Akademik', title: 'Darjah 5', subLabel: 'Kelas Ibnu Qayyum / Khaldun' },
+        { type: 'individual', category: 'Darjah 5 Ibnu Qayyum', title: 'Tempat Pertama', name: 'Aisyah Nur Damia Binti Mohd Azhar' },
+        { type: 'individual', category: 'Darjah 5 Ibnu Qayyum', title: 'Tempat Kedua', name: 'Muhammad Eden Rayyan Bin Mohd Luqmannulhakim' },
+        { type: 'individual', category: 'Darjah 5 Ibnu Qayyum', title: 'Tempat Ketiga', name: 'Nur Zatil Zarisyha Binti Dean' },
+        { type: 'individual', category: 'Darjah 5 Ibnu Khaldun', title: 'Tempat Pertama', name: 'Muhammad Umar Haziq Bin Mohd Nurharriz' },
+        { type: 'individual', category: 'Darjah 5 Ibnu Khaldun', title: 'Tempat Kedua', name: 'Muhammad Nuruddin Bin Mohd Anuar Fikri' },
+        { type: 'individual', category: 'Darjah 5 Ibnu Khaldun', title: 'Tempat Ketiga', name: 'Amni Hilmiah Binti Malik' },
+
+        /* --- SLOT 4: EXAM PUBLIC ACCOLADES --- */
+        { type: 'section', category: 'Majlis Penyampaian Anugerah', title: 'Anugerah Peperiksaan Awam', subLabel: 'Penerima Cemerlang UPKK, SDEA & SDKA' },
+        
+        { type: 'section', category: 'Anugerah Peperiksaan', title: 'Cemerlang UPKK', subLabel: 'Ujian Penilaian Kelas Kafa 2025' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 9A', name: 'Aisyah Nur Damia Binti Mohd Azhar' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: 'Eilfyna Safiyya Binti Mohd Sarimi' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: 'Farhah Amni Binti Mohamad Hafizi' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: 'Muhammad Danish Haiqal Bin Mohd Fazly Ezwan' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: 'Muhammad Nuruddin Bin Mohd Anuar Fikri' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: 'Nor Shadrina Binti Mohd Shahrir' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: 'Nurfarhana Aqilah Binti Mohd Fadli' },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: "Radhiah Insyirah Binti Shahrul RAFI'UDDIN Hamiz" },
+        { type: 'individual', category: 'Anugerah Cemerlang UPKK', title: 'Keputusan: 8A', name: 'Shahmin Haziq Bin Shahri' },
+
+        { type: 'section', category: 'Anugerah Peperiksaan', title: 'Cemerlang SDEA', subLabel: 'Sijil Darjah Enam Agama 2025' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.22', name: 'Muhammad Adha Bin Mohd Azuan' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.22', name: 'Muhammad Irfan Rizqi Bin Mohd Faizal' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.22', name: 'Muhammad Izzhaidhar Bin Mohd Hardi' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.22', name: 'Aqilah Maisarah Binti Ahad' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.22', name: 'Nur Fathiyyah Batrisyah Binti Muhammad Faiz' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.33', name: 'Nur Aimy Aqeela Binti Azman' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.33', name: 'Siti Hajar Zulaikha Binti Zawadi' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDEA', title: 'Keputusan GPS: 1.44', name: 'Iftiqar Azraei Bin Mohd Nizam' },
+
+        { type: 'section', category: 'Anugerah Peperiksaan', title: 'Cemerlang SDKA', subLabel: 'Sijil Darjah Khas Agama 2025' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 8', name: 'Nur Amani Basirah Binti Nazarhusen' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 9', name: 'Harith Mikhail Bin Hairulanuar' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 9', name: 'Nur Syahillah Binti Mohamad Nasir' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 9', name: 'Raudiahtul Isma Binti Khairil Affandi' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 9', name: 'Siti Umairah Binti Zaidil' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 10', name: 'Ainul Umairah Mardhiah Binti Rizal' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 10', name: 'Nur Zafirah Binti Sharizan' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 10', name: 'Nur Zara Aisyah Binti Nurul Hairil' },
+        { type: 'individual', category: 'Anugerah Cemerlang SDKA', title: 'Keputusan Agregat: 10', name: 'Nur Nabihah Binti Zaidi' },
+
+        /* --- SLOT 5: KATEGORI KEMUNCAK TOKOH --- */
+        { type: 'section', category: 'Kategori Utama', title: 'Anugerah Terbaik', subLabel: 'Penerima Utama Peperiksaan Keseluruhan 2025' },
+        { type: 'star', category: 'Anugerah Terbaik UPKK Tahun 2025', title: 'Penerima Tunggal Terbaik (9A)', name: 'Aisyah Nur Damia Binti Mohd Azhar', icon: 'fa-crown' },
+        { type: 'joint-winners', category: 'Anugerah Terbaik SDEA Tahun 2025', title: 'Penerima Bersama (CGPA 1.22)', names: [
+            'Muhammad Adha Bin Mohd Azuan',
+            'Muhammad Irfan Rizqi Bin Mohd Faizal',
+            'Muhammad Izzhaidhar Bin Mohd Hardi',
+            'Aqilah Maisarah Binti Ahad',
+            'Nur Fathiyyah Batrisyah Binti Muhammad Faiz'
+        ]},
+        { type: 'star', category: 'Anugerah Terbaik SDKA Tahun 2025', title: 'Penerima Terbaik (Agregat 8)', name: 'Nur Amani Basirah Binti Nazarhusen', icon: 'fa-crown' },
+        
+         /* --- SLOT 6: ANUGERAH KOKURIKULUM (PALING LAST SEKALI) --- */
+        { type: 'section', category: 'Anugerah Khas Guru Besar', title: 'Anugerah Cemerlang Ko-Kurikulum', subLabel: 'Tahun 2025' },
+        { type: 'star', category: 'Penerima Anugerah Ko-Kurikulum', title: 'Tokoh Kokurikulum', name: 'Muhammad Nuruddin Bin Mohd Anuar Fikri', meta: 'Kecemerlangan Sukan & Sahsiah', icon: 'fa-trophy' },
+
+
+        /* --- INTERMISSION: LUCKY DRAW 2 --- */
+        { type: 'section', category: 'Acara Sampingan', title: 'Cabutan Bertuah', subLabel: 'Sesi 2 & Akhir' },
+
+       
+        /* --- SLOT 7: BERSURAI --- */
+        { type: 'closing', title: 'Terima Kasih', subLabel: 'Tahniah Kepada Semua Pemenang!', meta: 'Sekolah Agama Taman Bayu Damai' }
+    ];
+
+    /* ENGINE CORE CONTROLLER */
+    class SlideDeckEngine {
+        constructor(data) {
+            this.data = data;
+            this.currentIndex = 0;
+            this.rootElement = document.getElementById('deck-root');
+        }
+
+        init() {
+            this.renderAllSlides();
+            this.updateView();
+            this.setupResponsiveScaling();
+            this.bindKeyboard();
+        }
+
+        renderAllSlides() {
+            let htmlBuffer = '';
+            this.data.forEach((slide, idx) => {
+                htmlBuffer += `<div class="slide-canvas" id="slide-node-${idx}">`;
+                htmlBuffer += `<div class="decor-ring"></div>`;
+
+                switch(slide.type) {
+                    case 'cover':
+                        htmlBuffer += `
+                            <div class="category">${slide.category}</div>
+                            <h1 class="title gold-text">${slide.title}</h1>
+                            <div class="sub-label">${slide.subLabel}</div>
+                            <div class="name" style="font-size: 32px; letter-spacing: 4px; font-weight: 500;">${slide.meta}</div>`;
+                        break;
+                    case 'tentatif':
+                        htmlBuffer += `
+                            <div class="category">Atur Cara Majlis</div>
+                            <h2 class="title gold-text" style="font-size: 65px; margin-bottom: 50px;">Tentatif Program</h2>
+                            <div class="tentatif-grid">
+                                <div class="tentatif-item"><h3 class="gold-text">07:30 PM</h3><p>Pendaftaran Ibu Bapa & Murid</p></div>
+                                <div class="tentatif-item"><h3 class="gold-text">08:00 PM</h3><p>Mesyuarat Agung BKS Ke-9</p></div>
+                                <div class="tentatif-item"><h3 class="gold-text">09:00 PM</h3><p>Majlis Anugerah Utama</p></div>
+                            </div>`;
+                        break;
+                    case 'profile':
+                        htmlBuffer += `
+                            <div class="category">${slide.category}</div>
+                            <h2 class="title gold-text">${slide.title}</h2>
+                            <div class="sub-label">${slide.subLabel}</div>
+                            <div class="name">${slide.name}</div>
+                            ${slide.meta ? `<div style="font-family:'Cinzel'; color:var(--gold); margin-top:25px; font-size:24px; letter-spacing:2px;">${slide.meta}</div>` : ''}`;
+                        break;
+                    case 'section':
+                        htmlBuffer += `
+                            <div class="divider-box">
+                                <div class="category">${slide.category}</div>
+                                <h2 class="title gold-text" style="font-size: 70px;">${slide.title}</h2>
+                                <div class="sub-label" style="margin-bottom:0;">${slide.subLabel}</div>
+                            </div>`;
+                        break;
+                    case 'individual':
+                        htmlBuffer += `
+                            <div class="category">${slide.category}</div>
+                            <h2 class="title gold-text" style="font-size: 48px; margin-bottom:20px;">${slide.title}</h2>
+                            <div class="name">${slide.name}</div>`;
+                        break;
+                    case 'star':
+                        htmlBuffer += `
+                            <div class="badge-icon"><i class="fa-solid ${slide.icon}"></i></div>
+                            <div class="category">${slide.category}</div>
+                            <h2 class="title gold-text" style="font-size: 52px; margin-bottom:20px;">${slide.title}</h2>
+                            <div class="name" style="color: var(--gold);">${slide.name}</div>
+                            ${slide.meta ? `<div style="margin-top:35px; font-weight:600; font-family:'Cinzel'; border:3px solid var(--gold); padding:15px 45px; border-radius:30px; color:var(--gold); font-size:26px;">${slide.meta}</div>` : ''}`;
+                        break;
+                    case 'joint-winners':
+                        htmlBuffer += `
+                            <div class="category">${slide.category}</div>
+                            <h2 class="title gold-text" style="font-size: 48px; margin-bottom: 40px;">${slide.title}</h2>
+                            <div class="group-box">
+                                <ul class="group-list">
+                                    ${slide.names.map(n => `<li>${n}</li>`).join('')}
+                                </ul>
+                            </div>`;
+                        break;
+                    case 'closing':
+                        htmlBuffer += `
+                            <h1 class="title gold-text" style="font-size: 110px;">${slide.title}</h1>
+                            <div class="sub-label" style="font-size: 52px;">${slide.subLabel}</div>
+                            <div style="width: 300px; height: 4px; background: var(--gold); margin: 40px 0;"></div>
+                            <div class="name" style="font-size: 28px; letter-spacing: 6px; opacity: 0.8;">${slide.meta}</div>`;
+                        break;
+                }
+                htmlBuffer += `</div>`;
+            });
+            this.rootElement.innerHTML = htmlBuffer;
+        }
+
+        updateView() {
+            const nodes = document.querySelectorAll('.slide-canvas');
+            nodes.forEach(n => n.classList.remove('active'));
+            
+            const targetNode = document.getElementById(`slide-node-${this.currentIndex}`);
+            if(targetNode) targetNode.classList.add('active');
+        }
+
+        next() {
+            if (this.currentIndex < this.data.length - 1) {
+                this.currentIndex++;
+                this.updateView();
+            }
+        }
+
+        prev() {
+            if (this.currentIndex > 0) {
+                this.currentIndex--;
+                this.updateView();
+            }
+        }
+
+        bindKeyboard() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); this.next(); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); this.prev(); }
+            });
+        }
+
+        setupResponsiveScaling() {
+            const resize = () => {
+                const ww = window.innerWidth;
+                const wh = window.innerHeight;
+                const scale = Math.min(ww / var_w, wh / var_h);
+                const container = document.getElementById('deck-root');
+                if (container) {
+                    container.style.transform = `scale(${scale})`;
+                    container.style.transformOrigin = 'center center';
+                }
+            };
+            const var_w = 1920;
+            const var_h = 1080;
+            window.addEventListener('resize', resize);
+            // Run on frame context
+            setTimeout(resize, 100);
+        }
+    }
+
+    // Instantiation
+    const deckEngine = new SlideDeckEngine(PresentationData);
+    document.addEventListener('DOMContentLoaded', () => deckEngine.init());
+</script>
+
+</body>
+</html>
